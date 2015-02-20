@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: ch.ethz.inf.vs:californium:0.18.7-final">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/ch/ethz/inf/vs/californium/0.18.7-final/californium-0.18.7-final.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/ch/ethz/inf/vs/californium/0.18.7-final/californium-0.18.7-final-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/ch/ethz/inf/vs/californium/0.18.7-final/californium-0.18.7-final-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
