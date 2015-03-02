@@ -1,8 +1,11 @@
 package smartmeters;
 
 import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 
+import org.aeonbits.owner.ConfigFactory;
 import org.eclipse.californium.core.CaliforniumLogger;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.network.Endpoint;
@@ -15,7 +18,7 @@ import madkit.kernel.Madkit;
  * Created by nikolay on 19.02.15.
  */
 
-public class SmartMetersServer extends CoapServer {
+public class SmartMetersServer extends CoapServer implements IListener {
     static {
         CaliforniumLogger.initialize();
         CaliforniumLogger.setLevel(Level.FINER);
@@ -23,19 +26,18 @@ public class SmartMetersServer extends CoapServer {
 
     // exit codes for runtime errors
     public static final int ERR_INIT_FAILED = 1;
-
-    // allows port configuration in Californium.properties
     private static final int port = NetworkConfig.getStandard().getInt(NetworkConfig.Keys.COAP_PORT);
+
+    private SmartMetersConfig simulationConfig  = ConfigFactory.create(SmartMetersConfig.class);
+    private TestimonialStore store              = TestimonialStore.getInstance();
+
+    private static Map<String, SubscribeSingle> handlers = new HashMap<String, SubscribeSingle>();
+    private SubscribeHub hub = new SubscribeHub();
 
     public static void main(String[] args) {
         try {
             CoapServer server = new SmartMetersServer();
             server.start();
-
-            for (Endpoint ep:server.getEndpoints()) {
-                ep.addInterceptor(new MessageTracer());
-            }
-
             System.out.println(SmartMetersServer.class.getSimpleName() + " listening on port " + port);
         } catch (Exception e) {
             System.err.println("Exiting");
@@ -43,8 +45,31 @@ public class SmartMetersServer extends CoapServer {
         }
     }
 
-    private void registerHandlers() {
-        add(new Subscribe());
+    @Override
+    public void onCreated(String _id) {
+        System.out.println("New meter registered and available on /subscribe/" + _id);
+        registerHandler(_id);
+    }
+
+    @Override
+    public void onUpdated(String id, String data) {
+        System.out.println("Meter with id " + id + " updated; heat = " + data);
+        if (handlers.containsKey(id)) {
+            handlers.get(id).changed();
+        }
+    }
+
+    private void registerHandler(String id) {
+        SubscribeSingle s = new SubscribeSingle(id);
+        handlers.put(id, s);
+        hub.add(s);
+    }
+
+    private void launchAgents() {
+        new Madkit(
+                "--launchAgents",
+                HeatMeterSPT943_4.class.getName() + ",false," + Integer.toString(simulationConfig.meters_count())
+        );
     }
 
     public SmartMetersServer() throws SocketException {
@@ -56,13 +81,11 @@ public class SmartMetersServer extends CoapServer {
                 .setString(NetworkConfig.Keys.HEALTH_STATUS_PRINT_LEVEL, "INFO");
 
         // add observe handler
-        registerHandlers();
+        add(hub);
 
-        // launch one agent in console mode
-        new Madkit(
-            "--launchAgents",
-            HeatAgent.class.getName() + ",false"
-        );
+        store.addListener(this);
+
+        launchAgents();
 
     }
 

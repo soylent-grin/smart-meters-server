@@ -1,12 +1,8 @@
 package smartmeters;
 
 import madkit.kernel.Agent;
-import madkit.kernel.AgentAddress;
-
-import smartmeters.TestimonialStore;
-
+import org.aeonbits.owner.ConfigFactory;
 import java.util.Random;
-
 
 /**
  * Created by nikolay on 19.02.15.
@@ -14,26 +10,32 @@ import java.util.Random;
 
 public class HeatAgent extends Agent {
 
-    private TestimonialStore store = TestimonialStore.getInstance();
+    private BuildingStore buildings = BuildingStore.getInstance();
+    private int building_id         = buildings.getNextBuildingId();
+
+    protected int quarters                       = buildings.getBuilding(building_id).getQuarters();
+    protected TestimonialStore store             = TestimonialStore.getInstance();
+    protected Random randomGenerator             = new Random();
+    protected SmartMetersConfig simulationConfig = ConfigFactory.create(SmartMetersConfig.class);
+
+    protected void setHeat() {
+        store.setData(calculateHeat(), Integer.toString(building_id));
+    }
+
+    protected String calculateHeat() {
+        return "undefined";
+    }
 
     @Override
     protected void activate() {
-        if (logger != null) {
-            logger.info(this.getName() + " starting..");
-        }
+        pause(randomGenerator.nextInt((simulationConfig.time_to_start()) + 1));
     }
 
     @Override
     protected void live() {
-        Random randomGenerator = new Random();
-        String generated;
         while (true) {
-            generated = Integer.toString(randomGenerator.nextInt(100));
-            if (logger != null) {
-                logger.info("Generated new testimony: " + generated);
-            }
-            store.setData(generated);
-            pause(2000);
+            setHeat();
+            pause(simulationConfig.meters_heartbeat());
         }
     }
 
